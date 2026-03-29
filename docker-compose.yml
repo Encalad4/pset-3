@@ -1,0 +1,20 @@
+services:
+  pyspark-notebook:
+    image: jupyter/pyspark-notebook:latest
+    container_name: pyspark-notebook
+    ports:
+      - "8888:8888"   # Jupyter
+      - "4040:4040"   # Spark UI
+    volumes:
+      - ./notebooks:/home/jovyan
+    user: root
+    command: >
+      bash -c "
+      pip install snowflake-connector-python snowflake-sqlalchemy requests 'pyarrow>=14.0.1' tqdm &&
+      start-notebook.sh --NotebookApp.token='' --NotebookApp.password=''
+      "
+    env_file:
+      - .env
+    environment:
+      - SPARK_LOCAL_IP=0.0.0.0
+      - PYSPARK_PYTHON=python3

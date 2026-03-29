@@ -1,0 +1,24 @@
+.env
+data/
+*.parquet
+*.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter and Spark generated folders inside notebooks/
+notebooks/.cache/
+notebooks/.ipynb_checkpoints/
+notebooks/.ipython/
+notebooks/.ivy2/
+notebooks/.jupyter/
+notebooks/.local/
+notebooks/.npm/
+
+# OS specific
+.DS_Store
+
+# Notes
+plan/
