@@ -146,7 +146,7 @@ Los 5 notebooks se ejecutan en orden secuencial. Cada uno lee sus parametros de 
 | 2 | `02_enriquecimiento_y_unificacion.ipynb` | Ejecuta un diagnostico inicial sobre los datos RAW para verificar IDs reales de vendors, payment types y rate codes. Crea las 5 tablas de lookup en RAW (`TAXI_ZONES`, `DIM_VENDOR`, `DIM_PAYMENT_TYPE`, `DIM_RATE_CODE`, `DIM_TRIP_TYPE`). Unifica Yellow y Green y las enriquece con los lookups en una sola operacion SQL (`UNION ALL` + `LEFT JOIN`), produciendo `RAW.INT_TRIPS_ENRICHED` con 869M filas. |
 | 3 | `03_construccion_obt.ipynb` | Construye `ANALYTICS.OBT_TRIPS` unificando Yellow+Green, enriqueciendo con lookups (broadcast joins), y agregando columnas derivadas. Procesamiento mes a mes con idempotencia (DELETE + INSERT). |
 | 4 | `04_validaciones_y_exploracion.ipynb` | Valida la OBT: nulos en campos esenciales, rangos logicos (distancia, duracion, montos), coherencia de fechas, conteos por servicio/mes, y estadisticas descriptivas. |
-| 5 | `05_data_analysis.ipynb` | Responde las 20 preguntas de negocio usando Spark SQL sobre `OBT_TRIPS`. |
+| 5 | `05_data_analysis.ipynb` | Responde las 20 preguntas de negocio usando Spark SQL sobre `OBT_TRIPS`. En este caso, se ha realizado tres estrategias para poder responder las 20 preguntas: usando Spark Functions (pesado en tiempo y memoria), un modelo mixto, donde se procesa con snowflake (mediante Spark) y se agrega con Spark Functions, y finalmente, mediante una función construida de Spark, usar SQL en Snowflake. |
 
 ---
 
