@@ -3,10 +3,10 @@
 **Universidad San Francisco de Quito — Data Mining, Semestre 8**
 
 *Integrantes*
-- Martín Montero ()
-- Gabriela Coloma ()
+- Martín Montero (00328595)
+- Gabriela Coloma (00325312)
 - Sebastián Encalada ()
-- Mateo Vivanco ()
+- Mateo Vivanco (00328476)
 - Luis Eduardo Zaldumbide (00330842)
 
 Pipeline de ingesta y analitica de viajes de taxi de NYC (Yellow y Green, 2015-2025) utilizando Spark en Jupyter, con destino a Snowflake. Se construye una **One Big Table (OBT)** desnormalizada para responder 20 preguntas de negocio.
