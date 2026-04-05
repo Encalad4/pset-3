@@ -398,34 +398,12 @@ Todas respondidas en `05_data_analysis.ipynb` usando Spark SQL sobre `OBT_TRIPS`
 
 ## Checklist de aceptacion
 
-- [ ] Docker Compose levanta Spark y Jupyter Notebook.
-- [ ] Todas las credenciales/parametros provienen de variables de ambiente (`.env`).
-- [ ] Cobertura 2015-2025 (Yellow/Green) cargada en RAW con matriz y conteos por lote.
-- [ ] `analytics.obt_trips` creada con columnas minimas, derivadas y metadatos.
-- [ ] Idempotencia verificada reingestando al menos un mes.
-- [ ] Validaciones basicas documentadas (nulos, rangos, coherencia).
-- [ ] 20 preguntas respondidas usando la OBT.
-- [ ] README claro: pasos, variables, esquema, decisiones, troubleshooting.
+- [x] Docker Compose levanta Spark y Jupyter Notebook.
+- [x] Todas las credenciales/parametros provienen de variables de ambiente (`.env`).
+- [x] Cobertura 2015-2025 (Yellow/Green) cargada en RAW con matriz y conteos por lote.
+- [x] `analytics.obt_trips` creada con columnas minimas, derivadas y metadatos.
+- [x] Idempotencia verificada reingestando al menos un mes.
+- [x] Validaciones basicas documentadas (nulos, rangos, coherencia).
+- [x] 20 preguntas respondidas usando la OBT.
+- [x] README claro: pasos, variables, esquema, decisiones, troubleshooting.
 
----
-
-## Estructura del repositorio
-
-```
-PSet-3/
-├── docker-compose.yml
-├── .env.example
-├── .gitignore
-├── README.md
-├── notebooks/
-│   ├── 01_ingesta_parquet_raw.ipynb
-│   ├── 02_enriquecimiento_y_unificacion.ipynb
-│   ├── 03_construccion_obt.ipynb
-│   ├── 04_validaciones_y_exploracion.ipynb
-│   └── 05_data_analysis.ipynb
-├── evidencias/
-│   └── (capturas de Compose, Jupyter, Spark UI, conteos, OBT)
-├── data/                  # (gitignored) Parquets descargados
-└── Plan/
-    └── P3_instructions.md
-```
