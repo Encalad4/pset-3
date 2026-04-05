@@ -1,6 +1,12 @@
 # PSet-3 — NYC TLC Trips: Spark + Snowflake (OBT)
 
 **Universidad San Francisco de Quito — Data Mining, Semestre 8**
+*Integrantes*
+- Martín Montero ()
+- Gabriela Coloma ()
+- Sebastián Encalada ()
+- Mateo Vivanco ()
+- Luis Eduardo Zaldumbide (00330842)
 
 Pipeline de ingesta y analitica de viajes de taxi de NYC (Yellow y Green, 2015-2025) utilizando Spark en Jupyter, con destino a Snowflake. Se construye una **One Big Table (OBT)** desnormalizada para responder 20 preguntas de negocio.
 
