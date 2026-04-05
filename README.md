@@ -44,10 +44,12 @@ Parquet (NYC TLC, 2015-2025)
 |  | RAW                  |  |  Espejo del origen + metadatos
 |  |  TRIPS_YELLOW        |  |
 |  |  TRIPS_GREEN         |  |
+|  |  INT_TRIPS_ENRICHED  |  |
 |  |  TAXI_ZONES          |  |
-|  |  PAYMENT_TYPES       |  |
-|  |  RATE_CODES          |  |
-|  |  VENDORS             |  |
+|  |  DIM_PAYMENT_TYPE    |  |
+|  |  DIM_RATE_CODE       |  |
+|  |  DIM_VENDOR          |  |
+|  |  DIM_TRIP_TYPE       |  |
 |  |  INGESTION_AUDIT     |  |
 |  +---------------------+  |
 |  +---------------------+  |
@@ -141,7 +143,7 @@ Los 5 notebooks se ejecutan en orden secuencial. Cada uno lee sus parametros de 
 | # | Notebook | Proposito |
 |---|---|---|
 | 1 | `01_ingesta_parquet_raw.ipynb` | Descarga Parquets de NYC TLC (2015-2025, Yellow/Green) y los escribe como espejo en `RAW.TRIPS_YELLOW` y `RAW.TRIPS_GREEN`. Crea la base de datos, warehouse y esquemas en Snowflake automaticamente. Registra auditoria en `RAW.INGESTION_AUDIT`. |
-| 2 | `02_enriquecimiento_y_unificacion.ipynb` | Carga tablas de lookup en RAW: `TAXI_ZONES` (265 zonas, desde CSV oficial), `PAYMENT_TYPES`, `RATE_CODES`, `VENDORS`. |
+| 2 | `02_enriquecimiento_y_unificacion.ipynb` | Ejecuta un diagnostico inicial sobre los datos RAW para verificar IDs reales de vendors, payment types y rate codes. Crea las 5 tablas de lookup en RAW (`TAXI_ZONES`, `DIM_VENDOR`, `DIM_PAYMENT_TYPE`, `DIM_RATE_CODE`, `DIM_TRIP_TYPE`). Unifica Yellow y Green y las enriquece con los lookups en una sola operacion SQL (`UNION ALL` + `LEFT JOIN`), produciendo `RAW.INT_TRIPS_ENRICHED` con 869M filas. |
 | 3 | `03_construccion_obt.ipynb` | Construye `ANALYTICS.OBT_TRIPS` unificando Yellow+Green, enriqueciendo con lookups (broadcast joins), y agregando columnas derivadas. Procesamiento mes a mes con idempotencia (DELETE + INSERT). |
 | 4 | `04_validaciones_y_exploracion.ipynb` | Valida la OBT: nulos en campos esenciales, rangos logicos (distancia, duracion, montos), coherencia de fechas, conteos por servicio/mes, y estadisticas descriptivas. |
 | 5 | `05_data_analysis.ipynb` | Responde las 20 preguntas de negocio usando Spark SQL sobre `OBT_TRIPS`. |
@@ -159,14 +161,22 @@ El esquema RAW actua como **espejo** del origen. No se filtran ni modifican dato
 | `TRIPS_YELLOW` | Viajes de taxis amarillos. Columnas originales + `pickup_datetime`, `dropoff_datetime` (renombradas de `tpep_*`), `service_type`, `run_id`, `source_year`, `source_month`, `source_path`, `ingested_at_utc`. |
 | `TRIPS_GREEN` | Viajes de taxis verdes. Columnas originales + `pickup_datetime`, `dropoff_datetime` (renombradas de `lpep_*`), `service_type`, `run_id`, `source_year`, `source_month`, `source_path`, `ingested_at_utc`. |
 
+### Tabla intermedia
+
+| Tabla | Filas | Contenido |
+|---|---|---|
+| `INT_TRIPS_ENRICHED` | 869,792,294 | Union de Yellow y Green con nombres legibles de zona, borough, vendor, payment type, rate code y trip type. Creada via `CREATE OR REPLACE TABLE` con `UNION ALL` + `LEFT JOIN` directo en Snowflake. Ninguna fila se filtra — todos los 869M viajes estan presentes. |
+
 ### Tablas de lookup
 
 | Tabla | Filas | Contenido |
 |---|---|---|
-| `TAXI_ZONES` | 265 | LocationID, Zone, Borough, service_zone (CSV oficial NYC TLC) |
-| `PAYMENT_TYPES` | 6 | 1=Credit card, 2=Cash, 3=No charge, 4=Dispute, 5=Unknown, 6=Voided |
-| `RATE_CODES` | 7 | 1=Standard, 2=JFK, 3=Newark, 4=Nassau/Westchester, 5=Negotiated, 6=Group, 99=Unknown |
-| `VENDORS` | 2 | 1=Creative Mobile Technologies, 2=VeriFone Inc. |
+| `TAXI_ZONES` | 265 | LocationID, Zone, Borough, service_zone (CSV oficial NYC TLC). Cargada via Spark. |
+| `DIM_VENDOR` | 7 | 1=Creative Mobile Technologies LLC, 2=Curb Mobility LLC, 3-5=Unknown (aparecen en datos sin documentacion oficial), 6=Myle Technologies Inc, 7=Helix |
+| `DIM_PAYMENT_TYPE` | 8 | 0=Flex Fare, 1=Credit card, 2=Cash, 3=No charge, 4=Dispute, 5=Unknown, 6=Voided, NULL=Not specified |
+| `DIM_RATE_CODE` | 8 | 1=Standard, 2=JFK, 3=Newark, 4=Nassau/Westchester, 5=Negotiated, 6=Group, 99=Null/unknown, NULL=Not specified |
+| `DIM_TRIP_TYPE` | 3 | 1=Street-hail, 2=Dispatch, NULL=Not specified (solo Green) |
+
 
 ### Tabla de auditoria
 
@@ -178,11 +188,19 @@ El esquema RAW actua como **espejo** del origen. No se filtran ni modifican dato
 
 Antes de escribir cada chunk (mes), se ejecuta `DELETE FROM TRIPS_{SERVICE} WHERE source_year = Y AND source_month = M`. Esto garantiza que reingestar un mes no duplica filas. El notebook muestra un mensaje de IDEMPOTENCIA cuando se borran filas previas.
 
+La tabla `INT_TRIPS_ENRICHED` usa `CREATE OR REPLACE TABLE` — se puede correr multiples veces sin duplicados porque reconstruye la tabla desde cero cada vez.
+
 ---
 
 ## Diseno de la OBT (analytics.obt_trips)
 
 Tabla unica desnormalizada con grano **1 fila = 1 viaje**. Contiene todas las columnas necesarias para responder las 20 preguntas de negocio sin JOINs adicionales.
+
+```
+RAW.TRIPS_YELLOW  ──┐
+                    ├──► RAW.INT_TRIPS_ENRICHED ──► ANALYTICS.OBT_TRIPS
+RAW.TRIPS_GREEN   ──┘         (notebook 02)              (notebook 03)
+```
 
 ### Columnas
 
@@ -222,6 +240,10 @@ El notebook 01 **cuenta** (sin filtrar) las siguientes anomalias por cada chunk:
 - Valores negativos en `trip_distance`, `fare_amount`, `total_amount`
 
 Los conteos se registran en la tabla `INGESTION_AUDIT` junto con el `run_id` y tiempo de carga.
+
+### Diagnostico en enriquecimiento (notebook 02)
+
+Antes de crear los catalogos, el notebook 02 consulta los valores reales en los datos para detectar IDs no documentados. Este paso permitio descubrir vendors 3, 4 y 5 y valores NULL en payment type, rate code y trip type, y agregarlos correctamente a los catalogos antes del enriquecimiento.
 
 ### Filtros en OBT (notebook 03)
 
