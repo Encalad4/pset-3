@@ -5,7 +5,7 @@
 *Integrantes*
 - Martín Montero (00328595)
 - Gabriela Coloma (00325312)
-- Sebastián Encalada ()
+- Sebastián Encalada (00328148)
 - Mateo Vivanco (00328476)
 - Luis Eduardo Zaldumbide (00330842)
 
