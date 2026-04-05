@@ -261,6 +261,9 @@ El notebook 04 verifica la OBT construida:
 - Conteos por servicio y mes
 - Estadisticas descriptivas de columnas numericas
 
+### Validaciones post-construccion (notebook 04)
+El notebook 05, a pesar de solo ser de análisis, brinda la posibilidad de poder verificar cualquiera de los pasos antes ejecutados.
+
 ---
 
 ## Matriz de cobertura 2015-2025
