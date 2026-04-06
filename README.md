@@ -119,8 +119,8 @@ cp .env.example .env
 
 ```bash
 # 1. Clonar el repositorio
-git clone <url-del-repo>
-cd PSet-3
+git clone https://github.com/Encalad4/pset-3.git
+cd pset-3
 
 # 2. Configurar variables de ambiente
 cp .env.example .env
