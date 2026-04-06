@@ -26,7 +26,8 @@ Pipeline de ingesta y analitica de viajes de taxi de NYC (Yellow y Green, 2015-2
 9. [Calidad y auditoria](#calidad-y-auditoria)
 10. [Matriz de cobertura 2015-2025](#matriz-de-cobertura-2015-2025)
 11. [20 Preguntas de negocio](#20-preguntas-de-negocio)
-12. [Checklist de aceptacion](#checklist-de-aceptacion)
+12. [Troubleshooting](#troubleshooting)
+13. [Checklist de aceptacion](#checklist-de-aceptacion)
 
 ---
 
@@ -69,34 +70,6 @@ Parquet (NYC TLC, 2015-2025)
 **Conectores utilizados:**
 - `spark-snowflake_2.12:2.16.0-spark_3.4` + `snowflake-jdbc:3.16.1` — lectura/escritura de DataFrames via Spark
 - `snowflake-connector-python` — operaciones DML (DELETE para idempotencia, CREATE para setup)
-
----
-
-## Matriz de Cobertura
-|Año|Servicio|Status|Conteo|
-|-|-|-|-|
-|2015|green|ok|19233765|
-|2015|yellow|ok|146039231|
-|2016|green|ok|16385541|
-|2016|yellow|ok|131131805|
-|2017|green|ok|11737059|
-|2017|yellow|ok|113500327|
-|2018|green|ok|8899718|
-|2018|yellow|ok|102871387|
-|2019|green|ok|6300985|
-|2019|yellow|ok|84598444|
-|2020|green|ok|1734176|
-|2020|yellow|ok|24649092|
-|2021|green|ok|1068755|
-|2021|yellow|ok|30904308|
-|2022|green|ok|840402|
-|2022|yellow|ok|39656098|
-|2023|green|ok|787060|
-|2023|yellow|ok|38310226|
-|2024|green|ok|660218|
-|2024|yellow|ok|41169720|
-|2025|green|ok|591375|
-|2025|yellow|ok|48722602|
 
 ---
 
@@ -390,15 +363,32 @@ PASS: 9 | WARNING: 0 | FAIL: 0
 
 ## Matriz de cobertura 2015-2025
 
-La matriz completa se genera al ejecutar el notebook 01 (ultima celda). Muestra el estado de cada combinacion servicio/ano/mes:
+|Año|Servicio|Status|Conteo|
+|-|-|-|-|
+|2015|green|ok|19233765|
+|2015|yellow|ok|146039231|
+|2016|green|ok|16385541|
+|2016|yellow|ok|131131805|
+|2017|green|ok|11737059|
+|2017|yellow|ok|113500327|
+|2018|green|ok|8899718|
+|2018|yellow|ok|102871387|
+|2019|green|ok|6300985|
+|2019|yellow|ok|84598444|
+|2020|green|ok|1734176|
+|2020|yellow|ok|24649092|
+|2021|green|ok|1068755|
+|2021|yellow|ok|30904308|
+|2022|green|ok|840402|
+|2022|yellow|ok|39656098|
+|2023|green|ok|787060|
+|2023|yellow|ok|38310226|
+|2024|green|ok|660218|
+|2024|yellow|ok|41169720|
+|2025|green|ok|591375|
+|2025|yellow|ok|48722602|
 
-| Estado | Significado |
-|---|---|
-| `ok` | Parquet descargado y cargado exitosamente |
-| `missing` | Parquet no disponible en la fuente (ej: meses futuros) |
-| `failed` | Error durante la descarga o carga |
-
-> **Nota:** La matriz detallada con conteos por lote se imprime al final del notebook 01 y se almacena en `RAW.INGESTION_AUDIT`.
+A parte se la puede ver al ejecutar el notebook 01 (ultima celda) en base a los chunks ingestados.
 
 ---
 
@@ -428,6 +418,51 @@ Todas respondidas en `05_data_analysis.ipynb` usando Spark SQL sobre `OBT_TRIPS`
 | r | Yield por milla (total_amount/trip_distance) por borough y hora |
 | s | Cambios YoY en volumen y ticket promedio por service_type |
 | t | Dias con alta congestion_surcharge: efecto en total_amount vs dias normales |
+
+---
+
+## Troubleshooting
+
+Problemas comunes y soluciones rapidas durante la ejecucion del proyecto.
+
+### 1) Jupyter no abre en `http://localhost:8888`
+
+- Verificar estado del contenedor: `docker compose ps`.
+- Reiniciar servicio: `docker compose down && docker compose up -d`.
+- Revisar logs del servicio: `docker compose logs -f pyspark-notebook`.
+
+### 2) Spark UI (`http://localhost:4040`) no responde
+
+- La UI solo aparece cuando hay una sesion Spark activa con jobs en ejecucion.
+- Ejecutar una celda dummy en notebook para activar jobs y volver a abrir la URL.
+- Si 4040 esta ocupado, Spark puede usar 4041/4042.
+
+### 3) Error de autenticacion o conexion a Snowflake
+
+- Validar variables en `.env`: `SNOWFLAKE_ACCOUNT`, `SNOWFLAKE_USER`, `SNOWFLAKE_PASSWORD`, `SNOWFLAKE_ROLE`, `SNOWFLAKE_WAREHOUSE`.
+- Confirmar permisos del rol sobre database/schemas/tables.
+- Re-ejecutar la celda de setup de Snowflake del notebook 01.
+
+### 4) La tabla `RAW.INGESTION_AUDIT` tiene pocos registros
+
+- Verificar que la escritura de auditoria use modo `append` y no `overwrite`.
+- Si se sobrescribio accidentalmente, reconstruir cobertura desde `RAW.TRIPS_YELLOW` y `RAW.TRIPS_GREEN` con conteos por `source_year/source_month`.
+
+### 5) Falla por memoria en cargas grandes
+
+- Ejecutar en chunks mensuales (ya parametrizado con `CHUNK_SIZE=month`).
+- Procesar por rangos de anos (ej. 2015-2018, 2019-2021, 2022-2025).
+- Cerrar y reiniciar kernel entre etapas pesadas.
+
+### 6) Error por dependencias faltantes dentro del contenedor
+
+- Reconstruir imagen/servicio: `docker compose up -d --build`.
+- Validar que se instalaron: `snowflake-connector-python`, `pyarrow`, `tqdm`.
+
+### 7) Idempotencia: aparecen duplicados al reingestar
+
+- Confirmar que se ejecuta `DELETE` por `source_year/source_month` antes de cada `INSERT`.
+- Verificar en Snowflake con conteos por servicio/anio/mes antes y despues de reingesta.
 
 ---
 
