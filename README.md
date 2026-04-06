@@ -72,6 +72,34 @@ Parquet (NYC TLC, 2015-2025)
 
 ---
 
+## Matriz de Cobertura
+|Año|Servicio|Status|Conteo|
+|-|-|-|-|
+|2015|green|ok|19233765|
+|2015|yellow|ok|146039231|
+|2016|green|ok|16385541|
+|2016|yellow|ok|131131805|
+|2017|green|ok|11737059|
+|2017|yellow|ok|113500327|
+|2018|green|ok|8899718|
+|2018|yellow|ok|102871387|
+|2019|green|ok|6300985|
+|2019|yellow|ok|84598444|
+|2020|green|ok|1734176|
+|2020|yellow|ok|24649092|
+|2021|green|ok|1068755|
+|2021|yellow|ok|30904308|
+|2022|green|ok|840402|
+|2022|yellow|ok|39656098|
+|2023|green|ok|787060|
+|2023|yellow|ok|38310226|
+|2024|green|ok|660218|
+|2024|yellow|ok|41169720|
+|2025|green|ok|591375|
+|2025|yellow|ok|48722602|
+
+---
+
 ## Requisitos previos
 
 - Docker y Docker Compose instalados.
@@ -151,7 +179,7 @@ Los 5 notebooks se ejecutan en orden secuencial. Cada uno lee sus parametros de 
 |---|---|---|
 | 1 | `01_ingesta_parquet_raw.ipynb` | Descarga Parquets de NYC TLC (2015-2025, Yellow/Green) y los escribe como espejo en `RAW.TRIPS_YELLOW` y `RAW.TRIPS_GREEN`. Crea la base de datos, warehouse y esquemas en Snowflake automaticamente. Registra auditoria en `RAW.INGESTION_AUDIT`. |
 | 2 | `02_enriquecimiento_y_unificacion.ipynb` | Ejecuta un diagnostico inicial sobre los datos RAW para verificar IDs reales de vendors, payment types y rate codes. Crea las 5 tablas de lookup en RAW (`TAXI_ZONES`, `DIM_VENDOR`, `DIM_PAYMENT_TYPE`, `DIM_RATE_CODE`, `DIM_TRIP_TYPE`). Unifica Yellow y Green y las enriquece con los lookups en una sola operacion SQL (`UNION ALL` + `LEFT JOIN`), produciendo `RAW.INT_TRIPS_ENRICHED` con 869M filas. |
-| 3 | `03_construccion_obt.ipynb` | Construye `ANALYTICS.OBT_TRIPS` unificando Yellow+Green, enriqueciendo con lookups (broadcast joins), y agregando columnas derivadas. Procesamiento mes a mes con idempotencia (DELETE + INSERT). |
+| 3 | `03_construccion_obt.ipynb` | Construye `ANALYTICS.OBT_TRIPS` desde la tabla intermedia ya enriquecida, agregando columnas derivadas y filtrando valores inconsistentes o nulos. Procesamiento mes a mes con idempotencia (DELETE + INSERT). |
 | 4 | `04_validaciones_y_exploracion.ipynb` | Valida la OBT: nulos en campos esenciales, rangos logicos (distancia, duracion, montos), coherencia de fechas, conteos por servicio/mes, y estadisticas descriptivas. |
 | 5 | `05_data_analysis.ipynb` | Responde las 20 preguntas de negocio usando Spark SQL sobre `OBT_TRIPS`. En este caso, se ha realizado tres estrategias para poder responder las 20 preguntas: usando Spark Functions (pesado en tiempo y memoria), un modelo mixto, donde se procesa con snowflake (mediante Spark) y se agrega con Spark Functions, y finalmente, mediante una función construida de Spark, usar SQL en Snowflake. |
 
